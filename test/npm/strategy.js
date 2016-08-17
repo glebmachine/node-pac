@@ -84,6 +84,31 @@ describe('NpmStrategy', function() {
 				done();
 			});
 		});
+
+		it('should complete installation with few new modules', function(done) {
+			var strategy = new NpmStrategy({
+				cwd: Path.resolve(__dirname, '../fixture'),
+				mode: 'production'
+			});
+
+			setTimeout(function() {
+				strategy.install(function() {
+					var dateChangedA = fs.statSync(Path.resolve(npmModulesDir, 'moduleA')).mtime;
+					var dateChangedB = fs.statSync(Path.resolve(npmModulesDir, 'moduleB')).mtime;
+
+					fs.removeSync(Path.resolve(npmModulesDir, 'moduleA'));
+
+					strategy.install(function(){
+						var newDateChangedA = fs.statSync(Path.resolve(npmModulesDir, 'moduleA')).mtime;
+						var newDateChangedB = fs.statSync(Path.resolve(npmModulesDir, 'moduleB')).mtime;
+
+						console.log([dateChangedA, newDateChangedA]);
+						console.log([dateChangedB, newDateChangedB]);
+						done();
+					});
+				});
+			}, 1000);
+		});
 	});
 
 	describe('#Pac', function() {
@@ -141,7 +166,7 @@ describe('NpmStrategy', function() {
 			});
 		});
 
-		it('should pac prodcution npm modules to .modules folder', function(done) {
+		it('should pac production npm modules to .modules folder', function(done) {
 			var strategy = new NpmStrategy({
 				cwd: Path.resolve(__dirname, '../fixture'),
 				mode: 'production'
