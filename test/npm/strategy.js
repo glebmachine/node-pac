@@ -85,29 +85,58 @@ describe('NpmStrategy', function() {
 			});
 		});
 
-		it('should complete installation with few new modules', function(done) {
+		it('should install only new modules', function(done) {
 			var strategy = new NpmStrategy({
 				cwd: Path.resolve(__dirname, '../fixture'),
 				mode: 'production'
 			});
 
-			setTimeout(function() {
-				strategy.install(function() {
-					var dateChangedA = fs.statSync(Path.resolve(npmModulesDir, 'moduleA')).mtime;
-					var dateChangedB = fs.statSync(Path.resolve(npmModulesDir, 'moduleB')).mtime;
+			strategy.install(function() {
+				var dateChangedA = fs.statSync(Path.resolve(npmModulesDir, 'moduleA')).ctime.toString();
+				var dateChangedB = fs.statSync(Path.resolve(npmModulesDir, 'moduleB')).ctime.toString();
 
-					fs.removeSync(Path.resolve(npmModulesDir, 'moduleA'));
+				fs.removeSync(Path.resolve(npmModulesDir, 'moduleA'));
 
+				setTimeout(function() {
 					strategy.install(function(){
-						var newDateChangedA = fs.statSync(Path.resolve(npmModulesDir, 'moduleA')).mtime;
-						var newDateChangedB = fs.statSync(Path.resolve(npmModulesDir, 'moduleB')).mtime;
+						var newDateChangedA = fs.statSync(Path.resolve(npmModulesDir, 'moduleA')).ctime.toString();
+						var newDateChangedB = fs.statSync(Path.resolve(npmModulesDir, 'moduleB')).ctime.toString();
 
-						console.log([dateChangedA, newDateChangedA]);
-						console.log([dateChangedB, newDateChangedB]);
+						dateChangedB.should.equal(newDateChangedB); // skipped due installed earlier
+						dateChangedA.should.not.equal(newDateChangedA); // renewed
+
 						done();
 					});
-				});
-			}, 1000);
+				}, 1200);
+			});
+		});
+
+		it('should update module with new version', function(done) {
+			var strategy = new NpmStrategy({
+				cwd: Path.resolve(__dirname, '../fixture'),
+				mode: 'production'
+			});
+
+			strategy.install(function() {
+				var dateChangedA = fs.statSync(Path.resolve(npmModulesDir, 'moduleA')).ctime.toString();
+				var dateChangedB = fs.statSync(Path.resolve(npmModulesDir, 'moduleB')).ctime.toString();
+
+				var packagejson = require(Path.resolve(npmModulesDir, 'moduleA', 'package.json'));
+				packagejson.version = '0.9.9';
+				fs.writeFileSync(Path.resolve(npmModulesDir, 'moduleA', 'package.json'), JSON.stringify(packagejson))
+
+				setTimeout(function() {
+					strategy.install(function(){
+						var newDateChangedA = fs.statSync(Path.resolve(npmModulesDir, 'moduleA')).ctime.toString();
+						var newDateChangedB = fs.statSync(Path.resolve(npmModulesDir, 'moduleB')).ctime.toString();
+
+						dateChangedB.should.equal(newDateChangedB); // skipped due installed earlier
+						dateChangedA.should.not.equal(newDateChangedA); // renewed
+
+						done();
+					});
+				}, 1200);
+			});
 		});
 	});
 
